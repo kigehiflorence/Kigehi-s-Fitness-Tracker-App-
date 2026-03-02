@@ -3,16 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel
+from datetime import datetime
 
 import models
 from database import SessionLocal, engine
 
-# 1. Create the database tables
+# Creates tables in SQLite
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# 2. Allow Frontend to access Backend (CORS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -21,7 +21,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 3. Database Dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -29,7 +28,6 @@ def get_db():
     finally:
         db.close()
 
-# 4. Pydantic Schema (Data validation)
 class WorkoutSchema(BaseModel):
     id: int
     title: str
@@ -37,7 +35,12 @@ class WorkoutSchema(BaseModel):
     image_url: str
     duration_min: int
 
-# 5. Seed Data (So the app isn't empty)
+# NEW: Schema for incoming workout data
+class ActivityLogCreate(BaseModel):
+    workout_type: str
+    duration: int
+    calories: int
+
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
@@ -54,7 +57,19 @@ def startup_event():
         db.commit()
     db.close()
 
-# 6. API Routes
 @app.get("/todays-plan", response_model=List[WorkoutSchema])
 def get_todays_plan(db: Session = Depends(get_db)):
     return db.query(models.Workout).all()
+
+# NEW API ROUTE: Receives data from React and saves to SQLite
+@app.post("/log-workout")
+def log_workout(log: ActivityLogCreate, db: Session = Depends(get_db)):
+    new_log = models.ActivityLog(
+        workout_type=log.workout_type,
+        duration=log.duration,
+        calories=log.calories
+    )
+    db.add(new_log)
+    db.commit()
+    db.refresh(new_log)
+    return {"message": "Workout saved successfully!"}
