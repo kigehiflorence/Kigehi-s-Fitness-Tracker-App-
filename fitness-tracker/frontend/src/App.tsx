@@ -70,7 +70,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+   let interval: ReturnType<typeof setInterval>;
     if (isTimerRunning && timeLeft !== null && timeLeft > 0) {
       interval = setInterval(() => setTimeLeft((prev) => (prev ? prev - 1 : 0)), 1000);
     } else if (timeLeft === 0) {
