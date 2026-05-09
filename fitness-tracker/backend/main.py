@@ -15,7 +15,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+   allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,9 +67,11 @@ def log_workout(log: ActivityLogCreate, db: Session = Depends(get_db)):
     new_log = models.ActivityLog(
         workout_type=log.workout_type,
         duration=log.duration,
-        calories=log.calories
+        calories=log.caloriesc
     )
     db.add(new_log)
     db.commit()
     db.refresh(new_log)
     return {"message": "Workout saved successfully!"}
+
+
