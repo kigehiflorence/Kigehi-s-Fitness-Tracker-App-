@@ -1,3 +1,6 @@
+
+from passlib.context import CryptContext
+from fastapi import HTTPException
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -40,6 +43,40 @@ class ActivityLogCreate(BaseModel):
     workout_type: str
     duration: int
     calories: int
+
+# --- AUTHENTICATION SETUP ---
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+@app.post("/signup")
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    # Check if user already exists
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    
+    # Hash password and save
+    hashed_password = pwd_context.hash(user.password)
+    new_user = models.User(username=user.username, password_hash=hashed_password)
+    db.add(new_user)
+    db.commit()
+    return {"message": "User created successfully"}
+
+@app.post("/login")
+def login_user(user: UserCreate, db: Session = Depends(get_db)):
+    # Find user in DB
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if not db_user:
+        raise HTTPException(status_code=400, detail="Invalid username or password")
+    
+    # Verify password
+    if not pwd_context.verify(user.password, db_user.password_hash):
+        raise HTTPException(status_code=400, detail="Invalid username or password")
+        
+    return {"message": "Login successful", "username": db_user.username}
 
 @app.on_event("startup")
 def startup_event():

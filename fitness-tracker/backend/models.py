@@ -18,3 +18,11 @@ class ActivityLog(Base):
     duration = Column(Integer) # minutes
     calories = Column(Integer)
     date = Column(DateTime, default=datetime.datetime.utcnow)
+    
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    password_hash = Column(String)
+
+    
