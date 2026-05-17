@@ -44,6 +44,53 @@ const nutritionPlanData: Record<string, any> = {
 };
 
 function App() {
+
+
+  // AUTHENTICATION STATES
+  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('currentUser') !== null);
+  const [currentUser, setCurrentUser] = useState<string | null>(() => localStorage.getItem('currentUser'));
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const endpoint = authMode === 'login' ? '/login' : '/signup';
+    
+    try {
+      const response = await fetch(`http://localhost:8000${endpoint}`, { // Change this to your Render URL if deployed!
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        alert(data.detail || "Authentication failed");
+        return;
+      }
+
+      if (authMode === 'login') {
+        setIsLoggedIn(true);
+        setCurrentUser(username);
+        localStorage.setItem('currentUser', username);
+      } else {
+        alert("Sign up successful! Please log in.");
+        setAuthMode('login');
+        setPassword('');
+      }
+    } catch (error) {
+      console.error("Auth error:", error);
+      alert("Network error. Please make sure the backend is running.");
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    localStorage.removeItem('currentUser');
+  };
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [activeTab, setActiveTab] = useState('workout');
   
@@ -122,6 +169,70 @@ function App() {
     }
 
     return (
+    <div className={isDarkMode ? 'dark' : ''}>
+      <div className="max-w-md mx-auto min-h-screen bg-brand-bg dark:bg-gray-900 transition-colors duration-300 relative pb-28 shadow-2xl overflow-y-auto">
+        
+        {/* If NOT logged in, show this Auth Screen */}
+        {!isLoggedIn ? (
+          <div className="flex flex-col justify-center items-center h-screen px-6 animate-fade-in">
+            <h1 className="text-4xl font-extrabold text-brand-dark dark:text-white mb-2 text-center">Kigehi’s Fitness</h1>
+            <p className="text-gray-500 mb-8 text-center">Your personal tracking companion</p>
+            
+            <form onSubmit={handleAuth} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl w-full border border-pink-100 dark:border-gray-700">
+              <h2 className="text-2xl font-bold text-brand-dark dark:text-white mb-6">
+                {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+              </h2>
+              
+              <input 
+                type="text" 
+                placeholder="Username" 
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full mb-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-700 text-brand-dark dark:text-white border border-gray-200 dark:border-gray-600 focus:outline-none focus:border-brand-pink"
+                required 
+              />
+              <input 
+                type="password" 
+                placeholder="Password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full mb-6 p-3 rounded-xl bg-gray-50 dark:bg-gray-700 text-brand-dark dark:text-white border border-gray-200 dark:border-gray-600 focus:outline-none focus:border-brand-pink"
+                required 
+              />
+              
+              <button type="submit" className="w-full bg-[#C2185B] text-white font-bold py-3 rounded-full shadow-md hover:bg-[#AD1457] transition-colors mb-4">
+                {authMode === 'login' ? 'Login' : 'Sign Up'}
+              </button>
+              
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                {authMode === 'login' ? "Don't have an account? " : "Already have an account? "}
+                <span 
+                  onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                  className="text-brand-pink font-bold cursor-pointer hover:underline"
+                >
+                  {authMode === 'login' ? 'Sign up' : 'Log in'}
+                </span>
+              </p>
+            </form>
+          </div>
+        ) : (
+          /* If THEY ARE logged in, show your actual app here! */
+          <>
+            <audio ref={audioRef} loop src="https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=electronic-rock-king-around-here-15045.mp3" />
+
+            <header className="pt-12 px-6 pb-2 flex justify-between items-end">
+              <h1 className="text-3xl font-extrabold text-brand-dark dark:text-white tracking-tight">Kigehi’s Fitness <br /> Tracker App</h1>
+              {/* Optional Logout Button */}
+              <button onClick={handleLogout} className="text-xs font-bold text-brand-pink mb-2 hover:underline">Log Out</button>
+            </header>
+
+            {/* ... THE REST OF YOUR EXISTING APP CODE GOES HERE ... */}
+            
+          </>
+        )}
+      </div>
+    </div>
+  );
       <div className="space-y-3 relative pb-20">
         {routine.map((exercise, index) => (
           <div key={index} className="flex items-center justify-between bg-pink-50 dark:bg-gray-700 p-4 rounded-2xl border border-pink-100 dark:border-gray-600">
