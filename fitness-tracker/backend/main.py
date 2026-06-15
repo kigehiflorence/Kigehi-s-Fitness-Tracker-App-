@@ -1,7 +1,5 @@
-
 from passlib.context import CryptContext
-from fastapi import HTTPException
-from fastapi import FastAPI, Depends
+from fastapi import HTTPException, FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
@@ -18,7 +16,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-   allow_origins=["*"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,6 +29,8 @@ def get_db():
     finally:
         db.close()
 
+# --- SCHEMAS ---
+
 class WorkoutSchema(BaseModel):
     id: int
     title: str
@@ -38,13 +38,24 @@ class WorkoutSchema(BaseModel):
     image_url: str
     duration_min: int
 
-# NEW: Schema for incoming workout data
 class ActivityLogCreate(BaseModel):
     workout_type: str
     duration: int
     calories: int
 
+# Schema to send history back to React
+class ActivityLogSchema(BaseModel):
+    id: int
+    workout_type: str
+    duration: int
+    calories: int
+    date: datetime
+
+    class Config:
+        from_attributes = True
+
 # --- AUTHENTICATION SETUP ---
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserCreate(BaseModel):
@@ -78,6 +89,8 @@ def login_user(user: UserCreate, db: Session = Depends(get_db)):
         
     return {"message": "Login successful", "username": db_user.username}
 
+# --- MAIN APP ROUTES ---
+
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
@@ -98,17 +111,19 @@ def startup_event():
 def get_todays_plan(db: Session = Depends(get_db)):
     return db.query(models.Workout).all()
 
-# NEW API ROUTE: Receives data from React and saves to SQLite
 @app.post("/log-workout")
 def log_workout(log: ActivityLogCreate, db: Session = Depends(get_db)):
     new_log = models.ActivityLog(
         workout_type=log.workout_type,
         duration=log.duration,
-        calories=log.caloriesc
+        calories=log.calories # <- Fixed the typo here!
     )
     db.add(new_log)
     db.commit()
     db.refresh(new_log)
     return {"message": "Workout saved successfully!"}
 
-
+@app.get("/my-history", response_model=List[ActivityLogSchema])
+def get_my_history(db: Session = Depends(get_db)):
+    # Returns the 5 most recent workouts for the progress tab
+    return db.query(models.ActivityLog).order_by(models.ActivityLog.date.desc()).limit(5).all()

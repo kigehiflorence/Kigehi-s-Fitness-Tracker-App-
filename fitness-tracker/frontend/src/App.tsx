@@ -59,7 +59,7 @@ function App() {
   }, [isDarkMode, isMusicOn, isNotificationsOn, steps, caloriesBurned]);
 
   useEffect(() => {
-    fetch('http://localhost:8000/todays-plan')
+    fetch('http://127.0.0.1:8000/todays-plan')
       .then(res => res.json())
       .then(data => setWorkouts(data))
       .catch(err => console.error("Error fetching data:", err));
@@ -67,7 +67,7 @@ function App() {
 
   useEffect(() => {
     if (activeTab === 'progress' && isLoggedIn) {
-      fetch('http://localhost:8000/my-history')
+      fetch('http://127.0.0.1:8000/my-history')
         .then(res => res.json())
         .then(data => setHistory(data))
         .catch(err => console.error("Failed to fetch history:", err));
@@ -96,17 +96,21 @@ function App() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     const endpoint = authMode === 'login' ? '/login' : '/signup';
+    
     try {
-      const response = await fetch(`http://localhost:8000${endpoint}`, {
+      const response = await fetch(`http://127.0.0.1:8000${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
+      
       const data = await response.json();
+      
       if (!response.ok) {
-        alert(data.detail || "Authentication failed");
+        alert(`Error: ${data.detail || "Authentication failed"}`);
         return;
       }
+
       if (authMode === 'login') {
         setIsLoggedIn(true);
         setCurrentUser(username);
@@ -118,7 +122,7 @@ function App() {
       }
     } catch (error) {
       console.error("Auth error:", error);
-      alert("Network error. Please make sure the backend is running.");
+      alert("Network error. Please make sure your Python backend is running.");
     }
   };
 
@@ -154,7 +158,7 @@ function App() {
     const workoutName = `${selectedGoal === 'lose' ? 'Fat Burn' : 'Strength'}: ${selectedTarget === 'upper' ? 'Upper Body' : 'Lower Body'}`;
     const estimatedCalories = selectedGoal === 'lose' ? 350 : 200;
     try {
-      await fetch('http://localhost:8000/log-workout', {
+      await fetch('http://127.0.0.1:8000/log-workout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workout_type: workoutName, duration: 30, calories: estimatedCalories })
